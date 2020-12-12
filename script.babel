@@ -1,0 +1,116 @@
+const w = 1000;
+const h = 800;
+const padding = 60;
+const MAPURL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json"
+const DATAURL = "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json"
+d3.select("#all").append("svg")
+  .attr("id", "map")
+  .attr("width", w)
+  .attr("height", h);
+d3.select("#all").append("div")
+  .attr("id", "tooltip")
+  .style("opacity", 0)
+  .html("<p>Placeholder</p>");
+d3.select("#map").append("text")
+  .attr("id", "title")
+  .attr("x", w / 2)
+  .attr("y", 3 * padding / 5)
+  .attr("text-anchor", "middle")
+  .text("College Education in the USA");
+d3.select("#map").append("text")
+  .attr("id", "description")
+  .attr("x", w / 2)
+  .attr("y", padding)
+  .attr("text-anchor", "middle")
+  .text("Percentage of Adults with Bachelor's Degrees or More");
+
+d3.queue()
+.defer(d3.json, MAPURL)
+.defer(d3.json, DATAURL)
+.await(drawMap)
+  
+// const promises = [];
+// promises.push(d3.json(MAPURL));
+// Promise.all(promises).then((us) => {
+//   console.log(us.type)
+// d3.json(MAPURL, (error, us) => {
+//   if (error) {
+//     console.log("fAIl")
+//     throw error;
+//   } else {
+function drawMap(error, us, data) {
+  if (error) {
+    throw error;
+  };
+  const counties = topojson.feature(us, us.objects.counties).features;
+  const dataEd = [];
+  for (let i = 0; i < data.length; i++) {
+    dataEd.push(data[i].bachelorsOrHigher);
+  }
+  const colors = ["#d9e9e0", "#b3d4c1", "#8dbfa3", "#67aa84", "#54a075", "#2e8b57", "#257147", "#194b2f", "#0c2517"	];
+  const colorScale = d3.scaleQuantile()
+    .domain(dataEd)
+    .range(colors);
+  const splitPoints = colorScale.quantiles();
+  d3.select("#map")
+      .append("g")
+      .attr("id", "legend");
+  d3.select("#legend").selectAll("rect")
+      .data(colors)
+      .enter()
+      .append("rect")
+      .attr("x", (d, i) => i * 80 + 80)
+      .attr("y", h - padding - 20)
+      .style("height", "20px")
+      .style("width", "80px")
+      .attr("fill", d => d);
+  d3.select("#legend")
+      .selectAll("text")
+      .data(splitPoints)
+      .enter()
+      .append("text")
+      .attr("x", (d, i) => i * 80 + 160)
+      .attr("y", h - padding - 40)
+      .attr("text-anchor", "middle")
+      .text(d => `${d}%`)
+  const myPath = d3.geoPath();
+  const orderedData = [];
+  for (let i = 0; i < counties.length; i++) {
+    for (let j = 0; j < data.length; j++) {
+      if (data[j].fips == counties[i].id) {
+        orderedData.push(data[j]);
+      }
+    }
+  }
+  d3.select("#map")
+    .append("g")
+    .attr("transform", `translate(0, ${padding})`)
+    .selectAll("path")
+    .data(counties)
+    .enter()
+    .append("path")
+    .attr("class", "county")
+    .attr("stroke", "black")
+    .attr("data-fips", d => d.id)
+    .attr("d", myPath)
+    .on("mouseover", () => {
+      d3.select("#tooltip")
+        .style("opacity", 1);
+  })
+    .on("mouseout", () => {
+    d3.select("#tooltip")
+      .style("opacity", 0)
+  });
+  d3.select("#map").selectAll(".county")
+    .data(orderedData)
+    .attr("data-education", d => d.bachelorsOrHigher)
+    .attr("fill", d => colorScale(d.bachelorsOrHigher))
+    .on("mouseover", (d, i) => {
+      d3.select("#tooltip")
+        .style("opacity", 1)
+        .attr("data-education", d.bachelorsOrHigher)
+        .html(`<p>${d.area_name}, ${d.state}<br>${d.bachelorsOrHigher}%`)
+  })
+
+  
+}

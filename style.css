@@ -1,0 +1,13 @@
+body {
+  background-color: cadetblue;
+}
+#map {
+  background-color: white;
+}
+#tooltip {
+  position: absolute;
+  
+}
+#title {
+  font-size: 30px;
+}
